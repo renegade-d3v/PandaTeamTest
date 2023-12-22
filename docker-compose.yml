@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+    app:
+        container_name: test_app
+        build:
+            context: .
+            dockerfile: docker/Dockerfile
+            args:
+                uid: ${UID}
+        ports:
+            - "8000:80"
+        volumes:
+            - .:/var/www/html
+            - ./docker/virtual-host.conf:/etc/apache2/sites-enabled/virtual-host.conf
+        environment:
+            - APACHE_DOCUMENT_ROOT=/var/www/html/public
+            - APACHE_RUN_USER=#${UID}
+            - APACHE_RUN_GROUP=#${UID}
+        networks:
+            backend:
+                aliases:
+                    - test_app
+    app-db:
+        image: mysql:8.0
+        container_name: app-db
+        volumes:
+            - ./run/var:/var/lib/mysql
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=${DB_DATABASE}
+            - MYSQL_USER=${DB_USERNAME}
+            - MYSQL_PASSWORD=${DB_PASSWORD}
+        networks:
+            backend:
+                aliases:
+                    - db
+networks:
+    backend:
+        name: backend-network
