@@ -2,23 +2,24 @@ version: '3.8'
 
 services:
     app:
-        container_name: app
         build:
             context: .
             dockerfile: docker/Dockerfile
+            args:
+                uid: ${UID}
+        container_name: app
         ports:
             - "8000:80"
+        environment:
+            - APACHE_RUN_USER=#1000
+            - APACHE_RUN_GROUP=#1000
         volumes:
             - .:/var/www/html
-            - ./docker/virtual-host.conf:/etc/apache2/sites-enabled/virtual-host.conf
-        environment:
-            - APACHE_DOCUMENT_ROOT=/var/www/html/public
-        depends_on:
-            - app-db
         networks:
-            app-network:
+            backend:
                 aliases:
                     - app
+
     app-db:
         image: mysql:8.0
         container_name: app-db
@@ -26,13 +27,11 @@ services:
             - ./run/var:/var/lib/mysql
         environment:
             - MYSQL_ROOT_PASSWORD=root
-            - MYSQL_DATABASE=panda
-            - MYSQL_USER=panda_app
-            - MYSQL_PASSWORD=
         networks:
-            app-network:
+            backend:
                 aliases:
-                    - db
+                    - app-db
+
 networks:
-    app-network:
-        name: backend
+    backend:
+        name: backend-network

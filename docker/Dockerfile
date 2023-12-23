@@ -14,24 +14,30 @@ RUN apt update \
           curl \
           zip \
           unzip \
+          g++ \
+          git \
+          sudo \
+          libbz2-dev \
           libicu-dev \
           libpng-dev \
           libjpeg-dev \
           libwebp-dev \
           libxpm-dev \
+          libmcrypt-dev \
           libfreetype6-dev \
           libxslt1-dev \
           librecode0 \
           librecode-dev \
           libonig-dev \
           libxml2-dev  \
+          libreadline-dev \
           libzip-dev \
           zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP Extensions
 RUN set -eux; \
-    docker-php-ext-install bcmath intl pdo_mysql mbstring pcntl soap sockets xml xmlwriter zip; \
+    docker-php-ext-install bcmath bz2 intl calendar iconv opcache pdo_mysql mbstring pcntl soap sockets xml xmlwriter zip; \
     docker-php-ext-configure gd \
             --prefix=/usr \
             --with-jpeg \
@@ -40,42 +46,27 @@ RUN set -eux; \
             --with-freetype; \
     docker-php-ext-install gd
 
-# Copy files to the container
-COPY . /var/www/html
+# Apache configs + document root.
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Change the owner and group of files and folders to ensure correct access rights
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-
-# Install composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Setup workdir
-WORKDIR /var/www/html
-
-# Setup permissions for cache and storage folders
-RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
-
-# Copy vhost, supervisor, cronjobs settings
-COPY ./docker/virtual-host.conf /etc/apache2/sites-available/000-default.conf
-COPY ./docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
+# Copy cronjobs settings
 COPY ./docker/cronjobs /etc/cron.d/cronjobs
 RUN chmod 0644 /etc/cron.d/cronjobs
 RUN crontab /etc/cron.d/cronjobs
 
-# Enable the Apache module
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Enable apache2 modules
 RUN a2enmod rewrite headers
 
-# Add localhost to the Apache configuration file
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+# Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install compose packages and dependencies
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
-
-# Generate the Composer class autoloader
-RUN composer dump-autoload
-
-# Run Laravel Artisan commands
-RUN php artisan key:generate && \
-    php artisan config:cache && \
-    php artisan route:cache
+# We need a user with the same UID/GID as the host user
+# so when we execute CLI commands, all the host file's permissions and ownership remain intact.
+# Otherwise commands from inside the container would create root-owned files and directories.
+ARG uid
+RUN useradd -G www-data,root -u $uid -d /home/devuser devuser
+RUN mkdir -p /home/devuser/.composer && chown -R devuser:devuser /home/devuser
