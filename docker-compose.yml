@@ -25,6 +25,7 @@ services:
         container_name: app-db
         volumes:
             - ./run/var:/var/lib/mysql
+            - ./docker/my.cnf:/etc/my.cnf
         environment:
             - MYSQL_ROOT_PASSWORD=root
         networks:
