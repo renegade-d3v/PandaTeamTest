@@ -10,6 +10,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt update \
     && apt upgrade -y \
     && apt install -y \
+          cron \
           curl \
           zip \
           unzip \
@@ -27,10 +28,6 @@ RUN apt update \
           libzip-dev \
           zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
-
-# Install extension from pecl
-RUN pecl install redis \
-    && docker-php-ext-enable redis
 
 # Install PHP Extensions
 RUN set -eux; \
@@ -72,11 +69,13 @@ RUN a2enmod rewrite headers
 # Add localhost to the Apache configuration file
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Run Laravel Artisan commands
-RUN php artisan key:generate && \
-    php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan migrate
+# Install compose packages and dependencies
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
 # Generate the Composer class autoloader
 RUN composer dump-autoload
+
+# Run Laravel Artisan commands
+RUN php artisan key:generate && \
+    php artisan config:cache && \
+    php artisan route:cache
