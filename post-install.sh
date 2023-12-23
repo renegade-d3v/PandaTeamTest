@@ -1,15 +1,19 @@
 #!/bin/bash
 
+set -e
+
+sudo -k
+
 cp .env.example .env
 
-docker-compose build --no-cache
+docker compose build --no-cache
 
 if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
     sudo apt-get install -y gcc g++ make nodejs
 fi
 
-docker-compose up -d
+docker compose up -d
 
 if [ -f .env ]; then
   export $(grep -v '^#' .env | xargs)
