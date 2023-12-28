@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -28,6 +30,17 @@ class LoginRequest extends FormRequest
         return [
             'email' => 'required|string',
             'password' => 'required|string',
+        ];
+    }
+
+    /**
+     * @return array
+     */
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'Введіть вашу електронну пошту, це обов\'язкове поле',
+            'password.required' => 'Введіть пароль, це обов\'язкове поле',
         ];
     }
 
@@ -78,5 +91,22 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->input('email')).'|'.$this->ip());
+    }
+
+    /**
+     * @param Validator $validator
+     * @return void
+     * @throws ValidationException
+     */
+    protected function failedValidation(Validator $validator): void
+    {
+        if ($this->is('api/*') || $this->expectsJson()) {
+            throw new HttpResponseException(response()->json([
+                'errors' => $validator->errors(),
+                'status' => true
+            ], 422));
+        }
+
+        parent::failedValidation($validator);
     }
 }

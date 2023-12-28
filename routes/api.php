@@ -1,6 +1,9 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\EmailVerificationNotificationController;
+use App\Http\Controllers\Api\LoginController;
+use App\Http\Controllers\Api\MainController;
+use App\Http\Controllers\Api\RegistrationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,6 +17,9 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::post('/registration', RegistrationController::class);
+Route::post('/login', LoginController::class);
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::middleware('verified')->post('/subscribe', MainController::class);
+    Route::middleware('throttle:6,1')->post('email/verification-notification', EmailVerificationNotificationController::class);
 });

@@ -4,8 +4,11 @@ namespace App\Http\Requests;
 
 use App\Rules\ExistAnnouncement;
 use App\Rules\ValidDomain;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class TrackPriceRequest extends FormRequest
 {
@@ -54,5 +57,22 @@ class TrackPriceRequest extends FormRequest
             'email.email' => ':attribute повинна бути валідною',
             'email.exists' => ':attribute повинна бути верифікованю.',
         ];
+    }
+
+    /**
+     * @param Validator $validator
+     * @return void
+     * @throws ValidationException
+     */
+    protected function failedValidation(Validator $validator): void
+    {
+        if ($this->is('api/*') || $this->expectsJson()) {
+            throw new HttpResponseException(response()->json([
+                'errors' => $validator->errors(),
+                'status' => true
+            ], 422));
+        }
+
+        parent::failedValidation($validator);
     }
 }

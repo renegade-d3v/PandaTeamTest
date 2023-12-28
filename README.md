@@ -30,6 +30,7 @@ docker exec -it app-db mysql -uroot -proot
 ```
 ```mysql
 SHOW DATABASES;
+CREATE DATABASE panda_db;
 USE panda_db;
 CREATE USER 'panda_app'@'%' IDENTIFIED BY '';
 GRANT ALL PRIVILEGES ON panda_db.* TO 'panda_app'@'%';
@@ -48,5 +49,51 @@ FLUSH PRIVILEGES;
 npm install
 npm run dev
 ```
-9. Відкрити у браузері
-http://localhost:8000
+9. Зайти в контейнер та запустити cronjob
+```bash
+docker exec -it app bash
+* * * * * /usr/bin/php /var/www/html/artisan schedule:run >> /dev/null 2>&1
+```
+
+API Endpoints:
+
+| Method   | Headers  | URL             | Description      | Body |
+| -------- |----------|-----------------|------------------|------|
+| `POST`   | Authorization: Bearer        |`api/subscribe`  | Підписка на ціну |
+```JSON
+{
+"announcement": "https://www.olx.ua/d/uk/obyavlenie/krossovki-etnies-metal-mulisha-barge-xl-IDJaSu2.html",
+"email": "random.registered.mail@gmail.com"
+}
+```
+
+| Method   | Headers | URL         | Description | Body |
+| -------- |---------|-------------|-------------|------|
+| `POST`   |         | `api/login` | Авторизація |
+```JSON
+{
+    "email": "random.registered.mail@gmail.com",
+    "password": "password"
+}
+```
+
+| Method   | Headers | URL                | Description | Body |
+| -------- |---------|--------------------|-------------|------|
+| `POST`   |         | `api/registration` | Реєстрація  |
+```JSON
+{
+    "email": "random.registered.mail@gmail.com",
+    "password": "12121212",
+    "password_confirmation": "12121212"
+}
+```
+
+| Method | Headers | URL                | Description                     | Body |
+|--------|---------|--------------------|---------------------------------|------|
+| `POST` |   Authorization: Bearer       | `api/email/verification-notification` | Відправка листа для верифікації |
+
+
+## Також доступний веб інтерфейс, с формою. http://localhost:8000/
+
+## Схема роботи:
+![img.png](img.png)
